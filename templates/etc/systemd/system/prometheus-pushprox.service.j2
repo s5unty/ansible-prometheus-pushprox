@@ -1,0 +1,15 @@
+[Unit]
+Description=Prometheus PushProx
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User={{ pushprox_user }}
+Group={{ pushprox_group }}
+ExecStart={{ pushprox_root_dir }}/client --fqdn={{ pushprox_client_fqdn }} --proxy-url={{ pushprox_client_proxy_url }}
+SyslogIdentifier=pushprox
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

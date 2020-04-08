@@ -1,0 +1,9 @@
+---
+# minimum supported version: 0.15
+pushprox_user: "prometheus"
+pushprox_group: "prometheus"
+pushprox_root_dir: "/opt/prometheus/pushprox"
+pushprox_log_dir: "/var/log/prometheus/"
+
+pushprox_client_fqdn: "{{ ansible_host }}"
+pushprox_client_proxy_url: ""

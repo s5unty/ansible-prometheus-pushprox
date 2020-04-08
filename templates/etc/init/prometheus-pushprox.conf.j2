@@ -1,0 +1,16 @@
+description "Prometheus PushProx"
+start on (runlevel [345] and started network)
+stop on (runlevel [!345] or stopping network)
+
+respawn
+{% if upstart_version.stdout | replace("init (upstart ", "") |replace(")","") is version('1.4', '>=') %}
+setuid {{ pushprox_user }}
+setgid {{ pushprox_group }}
+{% endif %}
+
+script
+  exec >> "{{ pushprox_log_dir }}/pushprox.log"
+  exec 2>&1
+  exec {{ pushprox_root_dir }}/client --fqdn={{ pushprox_client_fqdn }} --proxy-url={{ pushprox_client_proxy_url }}
+
+end script

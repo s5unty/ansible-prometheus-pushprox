@@ -1,0 +1,3 @@
+pushprox_client_bin: "http://nexus.genscript.com/repository/it/prometheus/pushprox/pushprox-client"
+pushprox_proxy_bin: "http://nexus.genscript.com/repository/it/prometheus/pushprox/pushprox-proxy"
+

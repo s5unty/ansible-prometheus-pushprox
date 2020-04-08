@@ -1,0 +1,101 @@
+---
+- name: download prometheus pushprox client binary
+# tags: [ never, push ]
+  block:
+    - tempfile:
+        state: file
+        suffix: tmp
+      delegate_to: 127.0.0.1
+      register: tmp
+
+    - get_url:
+        url: "{{ pushprox_client_bin }}"
+        dest: "{{ tmp.path }}"
+        force: yes
+      delegate_to: 127.0.0.1
+
+    - file:
+        path: "{{ pushprox_root_dir }}"
+        state: directory
+
+    - copy:
+        src: "{{ tmp.path }}"
+        dest: "{{ pushprox_root_dir }}/client"
+        mode: "0755"
+      register: prometheus_pushprox_updated
+      notify:
+        - restart pushprox
+
+    - file:
+        path: "{{ tmp.path }}"
+        state: absent
+      delegate_to: 127.0.0.1
+      when: tmp.path is defined
+
+      #- name: download prometheus pushprox client binary
+      #  tags: pull
+      #  get_url:
+      #    url: "{{ pushprox_client_bin }}"
+      #    dest: "{{ pushprox_root_dir }}/client"
+      #    mode: "0755"
+      #  register: prometheus_pushprox_updated
+      #  notify:
+      #    - restart restart pushprox
+
+- name: update group and owner for files
+  file:
+    path: "{{ pushprox_root_dir }}"
+    state: directory
+    recurse: yes
+    owner: "{{ pushprox_user}}"
+    group: "{{ pushprox_group }}"
+  when: prometheus_pushprox_updated is changed
+
+- name: create systemd service unit
+  template:
+    src: etc/systemd/system/prometheus-pushprox.service.j2
+    dest: /etc/systemd/system/prometheus-pushprox.service
+    owner: root
+    group: root
+    mode: 0644
+  when: service_mgr | default(ansible_service_mgr) == 'systemd'
+  notify:
+    - reenable pushprox service
+    - restart pushprox
+
+- name: Looking which version of upstart is install
+  command: initctl version
+  when: service_mgr | default(ansible_service_mgr) == 'upstart'
+  register: upstart_version
+  changed_when: false
+
+- name: create init service unit
+  template:
+    src: etc/init/prometheus-pushprox.conf.j2
+    dest: /etc/init/prometheus-pushprox.conf
+    owner: root
+    group: root
+    mode: 0644
+  when: service_mgr | default(ansible_service_mgr) == 'upstart'
+  notify:
+    - reinit pushprox
+    - restart pushprox
+
+- name: create sysvinit service unit
+  template:
+    src: etc/init.d/prometheus-pushprox.j2
+    dest: /etc/init.d/prometheus-pushprox
+    owner: root
+    group: root
+    mode: 0755
+  when: service_mgr | default(ansible_service_mgr) in [ 'sysvinit', 'service' ]
+  notify:
+    - restart pushprox
+
+- meta: flush_handlers
+
+- name: ensure prometheus pushprox service is enabled and started
+  service:
+    name: prometheus-pushprox
+    state: started
+    enabled: yes
